@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iMODA Attendance &amp; OT Register</title>
+<style>
+  :root{
+    --ink:#1c2024; --soft:#5b6470; --faint:#8b929c;
+    --paper:#eef1f4; --panel:#ffffff; --line:#dce0e6; --line-strong:#c4cad2;
+    --steel:#2f4858; --steel-dk:#243947; --amber:#c9821f; --amber-soft:#f5e8d2;
+    --green:#2f7d43; --green-soft:#e6f4ea; --red:#b23b2b; --red-soft:#fbeae7;
+    --blue:#2d5a8a;
+    --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --shadow:0 1px 2px rgba(28,32,36,.06),0 4px 16px rgba(28,32,36,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.5;
+    font-size:15px;-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;cursor:pointer;}
+  .hidden{display:none !important;}
+
+  /* ---------- LOGIN ---------- */
+  #login{min-height:100vh;display:grid;place-items:center;padding:24px;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, #dfe6ee 0%, transparent 60%),
+      var(--paper);}
+  .login-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);width:100%;max-width:390px;padding:34px 32px 30px;}
+  .brand{display:flex;align-items:center;gap:11px;margin-bottom:26px;}
+  .brand .mark{width:38px;height:38px;border-radius:9px;background:var(--steel);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.5px;flex:none;}
+  .brand .tt{font-weight:800;font-size:1.05rem;letter-spacing:-.02em;line-height:1.15;}
+  .brand .tt span{display:block;font-weight:500;font-size:.72rem;color:var(--soft);letter-spacing:.02em;}
+  .login-card h1{font-size:1.15rem;margin:0 0 3px;letter-spacing:-.02em;}
+  .login-card .lsub{color:var(--soft);font-size:.85rem;margin:0 0 22px;}
+  .field{margin-bottom:15px;}
+  .field label{display:block;font-size:.78rem;font-weight:600;margin-bottom:6px;color:var(--ink);}
+  .field input{width:100%;padding:11px 13px;border:1px solid var(--line-strong);border-radius:8px;
+    font-size:.95rem;background:var(--paper);color:var(--ink);font-family:var(--mono);}
+  .field input:focus{outline:none;border-color:var(--steel);box-shadow:0 0 0 3px rgba(47,72,88,.12);background:#fff;}
+  .btn-primary{width:100%;padding:12px;border:none;border-radius:8px;background:var(--steel);
+    color:#fff;font-weight:700;font-size:.96rem;margin-top:6px;transition:background .15s;}
+  .btn-primary:hover{background:var(--steel-dk);}
+  .btn-primary:disabled{opacity:.55;cursor:not-allowed;}
+  .login-err{background:var(--red-soft);color:#7a2318;border-left:3px solid var(--red);
+    padding:10px 13px;border-radius:6px;font-size:.85rem;margin-bottom:16px;font-family:var(--mono);}
+  .login-foot{margin-top:20px;font-size:.72rem;color:var(--faint);text-align:center;line-height:1.5;}
+
+  /* ---------- APP SHELL ---------- */
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+  .topbar{background:var(--panel);border-bottom:1px solid var(--line-strong);
+    display:flex;align-items:center;gap:16px;padding:0 20px;height:60px;position:sticky;top:0;z-index:20;}
+  .topbar .mark{width:32px;height:32px;border-radius:8px;background:var(--steel);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;flex:none;}
+  .topbar .title{font-weight:800;letter-spacing:-.02em;font-size:1rem;}
+  .topbar .title span{font-weight:500;color:var(--soft);font-size:.75rem;margin-left:2px;}
+  .topbar .spacer{flex:1;}
+  .whoami{display:flex;align-items:center;gap:11px;}
+  .whoami .info{text-align:right;line-height:1.25;}
+  .whoami .info .nm{font-weight:700;font-size:.85rem;}
+  .whoami .info .rl{font-size:.72rem;color:var(--soft);font-family:var(--mono);}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--amber-soft);color:var(--amber);
+    display:grid;place-items:center;font-weight:800;font-size:.8rem;flex:none;border:1px solid var(--amber);}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);border-radius:7px;padding:7px 12px;
+    font-size:.8rem;font-weight:600;color:var(--soft);}
+  .btn-ghost:hover{border-color:var(--steel);color:var(--ink);}
+
+  .tabs{display:flex;gap:3px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);
+    overflow-x:auto;position:sticky;top:60px;z-index:19;}
+  .tab{background:none;border:none;padding:13px 15px;font-size:.86rem;font-weight:600;color:var(--soft);
+    border-bottom:2.5px solid transparent;white-space:nowrap;margin-bottom:-1px;}
+  .tab:hover{color:var(--ink);}
+  .tab.active{color:var(--steel);border-bottom-color:var(--amber);}
+  .tab .count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;
+    background:var(--amber);color:#fff;border-radius:9px;font-size:.68rem;margin-left:5px;vertical-align:middle;}
+
+  main{flex:1;padding:24px 20px 60px;max-width:1180px;width:100%;margin:0 auto;}
+  .placeholder{background:var(--panel);border:1px dashed var(--line-strong);border-radius:12px;
+    padding:44px 30px;text-align:center;color:var(--soft);}
+  .placeholder h2{color:var(--ink);font-size:1.15rem;margin:0 0 8px;letter-spacing:-.01em;}
+  .placeholder .tag{display:inline-block;font-family:var(--mono);font-size:.72rem;background:var(--amber-soft);
+    color:var(--amber);padding:3px 10px;border-radius:20px;margin-bottom:16px;font-weight:600;}
+  .placeholder p{max-width:52ch;margin:0 auto 6px;font-size:.9rem;}
+  .placeholder .built{margin-top:20px;font-family:var(--mono);font-size:.78rem;color:var(--faint);
+    border-top:1px solid var(--line);padding-top:16px;display:inline-block;}
+
+  .period-bar{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px 16px;margin-bottom:20px;flex-wrap:wrap;}
+  .period-bar .pl{font-size:.78rem;color:var(--soft);font-weight:600;}
+  .period-bar select{padding:8px 11px;border:1px solid var(--line-strong);border-radius:7px;
+    font-family:var(--mono);font-size:.85rem;background:var(--paper);color:var(--ink);}
+  .lock-badge{font-family:var(--mono);font-size:.7rem;padding:3px 9px;border-radius:5px;font-weight:700;}
+  .lock-badge.open{background:var(--green-soft);color:var(--green);}
+  .lock-badge.locked{background:var(--red-soft);color:var(--red);}
+
+  .boot{min-height:100vh;display:grid;place-items:center;color:var(--soft);font-family:var(--mono);font-size:.85rem;}
+
+  /* ---------- REGISTER ---------- */
+  .reg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px 12px 0 0;
+    border-bottom:none;padding:16px 20px;flex-wrap:wrap;}
+  .reg-head .nm{font-weight:800;font-size:1.05rem;letter-spacing:-.01em;}
+  .reg-head .meta{font-size:.8rem;color:var(--soft);margin-top:3px;}
+  .reg-head .meta strong{color:var(--ink);}
+  .status-badge{font-family:var(--mono);font-size:.7rem;padding:4px 11px;border-radius:20px;font-weight:700;white-space:nowrap;}
+  .status-badge.Draft{background:#eef1f4;color:var(--soft);}
+  .status-badge.Submitted{background:#e9f0f8;color:var(--blue);}
+  .status-badge.Approved{background:var(--green-soft);color:var(--green);}
+  .status-badge.Rejected{background:var(--red-soft);color:var(--red);}
+
+  .reg-wrap{background:var(--panel);border:1px solid var(--line);border-radius:0 0 12px 12px;overflow-x:auto;}
+  table.reg{border-collapse:collapse;width:100%;min-width:720px;font-size:.85rem;}
+  table.reg th{background:#f6f8fa;color:var(--soft);font-weight:600;font-size:.72rem;text-align:left;
+    padding:9px 10px;border-bottom:1px solid var(--line-strong);position:sticky;top:0;z-index:2;}
+  table.reg td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  table.reg tr.weekend td{background:#fafbfc;}
+  table.reg tr.mbreak td{border-top:2px solid var(--line-strong);}
+  .daycell{white-space:nowrap;}
+  .daycell .d{font-weight:700;font-family:var(--mono);}
+  .daycell .w{color:var(--soft);font-size:.72rem;margin-left:5px;}
+  .daycell .m{color:var(--faint);font-size:.68rem;margin-left:4px;text-transform:uppercase;}
+  .cell-ctl{width:100%;padding:6px 7px;border:1px solid var(--line);border-radius:6px;
+    font-size:.82rem;background:#fff;color:var(--ink);font-family:var(--sans);}
+  .cell-ctl:focus{outline:none;border-color:var(--steel);box-shadow:0 0 0 2px rgba(47,72,88,.12);}
+  .cell-ctl:disabled{background:#f2f4f6;color:var(--faint);cursor:not-allowed;}
+  .cell-ctl.code{min-width:120px;}
+  .cell-ctl.oth{width:70px;text-align:center;}
+  .cell-ctl.t{width:108px;font-family:var(--mono);}
+  td.disabled{background:#f7f8fa;}
+
+  .reg-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    margin-top:16px;}
+  .sumline{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:.8rem;}
+  .chip b{font-family:var(--mono);}
+  .chip.ot{border-color:var(--amber);background:var(--amber-soft);color:#7a4d0f;}
+  .actions{display:flex;gap:10px;}
+  .btn{padding:10px 18px;border-radius:8px;font-weight:700;font-size:.88rem;border:1px solid var(--line-strong);background:#fff;color:var(--ink);}
+  .btn:hover{border-color:var(--steel);}
+  .btn.primary{background:var(--steel);color:#fff;border-color:var(--steel);}
+  .btn.primary:hover{background:var(--steel-dk);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .savebar{position:sticky;bottom:0;background:linear-gradient(0deg,var(--paper) 70%,transparent);
+    padding:14px 0 4px;margin-top:8px;display:flex;justify-content:flex-end;gap:10px;z-index:5;}
+  .dirty-note{align-self:center;margin-right:auto;font-size:.8rem;color:var(--amber);font-weight:600;}
+
+  .note{border-radius:8px;padding:11px 15px;font-size:.85rem;margin-bottom:16px;}
+  .note.amber{background:var(--amber-soft);border-left:3px solid var(--amber);color:#7a4d0f;}
+  .note.red{background:var(--red-soft);border-left:3px solid var(--red);color:#7a2318;}
+  .note.green{background:var(--green-soft);border-left:3px solid var(--green);color:#14532d;}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:11px 20px;border-radius:8px;font-size:.88rem;font-weight:600;
+    opacity:0;transition:all .25s;z-index:100;pointer-events:none;box-shadow:var(--shadow);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* mobile: let the grid breathe — hide remarks col, tighten controls */
+  @media (max-width:640px){
+    table.reg{min-width:560px;}
+    .hide-sm{display:none;}
+    .cell-ctl.code{min-width:96px;}
+    .cell-ctl.t{width:92px;}
+  }
+
+  /* ---------- APPROVALS ---------- */
+  .queue{display:grid;gap:10px;}
+  .searchbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .searchbar input{flex:1;padding:10px 14px;border:1px solid var(--line-strong);border-radius:8px;
+    font-size:.9rem;background:var(--panel);color:var(--ink);}
+  .searchbar input:focus{outline:none;border-color:var(--steel);box-shadow:0 0 0 3px rgba(47,72,88,.12);}
+  .searchbar .scount{font-size:.8rem;color:var(--soft);font-family:var(--mono);white-space:nowrap;}
+  .qcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;
+    display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color .15s;}
+  .qcard:hover{border-color:var(--steel);}
+  .qcard .qav{width:38px;height:38px;border-radius:50%;background:#e9f0f8;color:var(--blue);
+    display:grid;place-items:center;font-weight:800;font-size:.8rem;flex:none;}
+  .qcard .qmain{flex:1;min-width:0;}
+  .qcard .qn{font-weight:700;font-size:.92rem;}
+  .qcard .qm{font-size:.78rem;color:var(--soft);font-family:var(--mono);}
+  .qcard .qot{font-family:var(--mono);font-size:.8rem;color:#7a4d0f;background:var(--amber-soft);
+    padding:3px 9px;border-radius:6px;white-space:nowrap;}
+  .qcard .qarrow{color:var(--faint);font-size:1.1rem;}
+  .queue-empty{background:var(--panel);border:1px dashed var(--line-strong);border-radius:10px;
+    padding:36px;text-align:center;color:var(--soft);}
+
+  .review-back{background:none;border:none;color:var(--steel);font-weight:700;font-size:.85rem;
+    padding:0;margin-bottom:14px;cursor:pointer;}
+  .review-back:hover{text-decoration:underline;}
+  .approve-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-top:16px;}
+  .approve-box h3{margin:0 0 12px;font-size:1rem;}
+  .approve-box textarea{width:100%;min-height:64px;padding:10px 12px;border:1px solid var(--line-strong);
+    border-radius:8px;font-family:var(--sans);font-size:.9rem;resize:vertical;color:var(--ink);background:var(--paper);}
+  .approve-box textarea:focus{outline:none;border-color:var(--steel);}
+  .approve-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .btn.green{background:var(--green);color:#fff;border-color:var(--green);}
+  .btn.green:hover{filter:brightness(.95);}
+  .btn.red{background:#fff;color:var(--red);border-color:var(--red);}
+  .btn.red:hover{background:var(--red-soft);}
+  .sign-row{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;font-size:.82rem;color:var(--soft);}
+  .sign-row .sig b{display:block;color:var(--ink);font-family:var(--mono);}
+
+  /* ---------- ADMIN TABLES (periods / people) ---------- */
+  .admin-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .admin-head h2{font-size:1.1rem;margin:0;letter-spacing:-.01em;}
+  .admin-note{font-size:.82rem;color:var(--soft);margin-bottom:14px;}
+  .atable{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto;}
+  table.list{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem;}
+  table.list th{background:#f6f8fa;color:var(--soft);font-weight:600;font-size:.72rem;text-align:left;
+    padding:10px 12px;border-bottom:1px solid var(--line-strong);}
+  table.list td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  table.list tr:last-child td{border-bottom:none;}
+  table.list input[type=date],table.list select{padding:7px 9px;border:1px solid var(--line);border-radius:6px;
+    font-family:var(--mono);font-size:.82rem;background:#fff;color:var(--ink);}
+  table.list select{font-family:var(--sans);}
+  .btn-sm{padding:6px 12px;font-size:.8rem;border-radius:6px;}
+  .row-dirty{background:#fffdf5;}
+  .cov-flag{font-family:var(--mono);font-size:.68rem;color:#7a4d0f;background:var(--amber-soft);padding:2px 7px;border-radius:5px;margin-left:6px;}
+  .add-form{background:var(--panel);border:1px solid var(--line-strong);border-radius:12px;padding:18px 20px;margin-bottom:16px;}
+  .add-form h3{margin:0 0 14px;font-size:1rem;}
+  .add-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+  .add-grid label{font-size:.78rem;font-weight:600;color:var(--soft);display:flex;flex-direction:column;gap:5px;}
+  .add-grid input,.add-grid select{padding:9px 11px;border:1px solid var(--line-strong);border-radius:7px;
+    font-size:.9rem;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+  .add-grid input:focus,.add-grid select:focus{outline:none;border-color:var(--steel);}
+  pre.snippet{background:#0f1720;color:#d6e2ee;padding:12px 14px;border-radius:8px;overflow-x:auto;
+    font-family:var(--mono);font-size:.72rem;line-height:1.45;margin:10px 0;white-space:pre;}
+
+  /* ---------- OT ANALYSIS / SUMMARY ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+  .kpi .kl{font-size:.75rem;color:var(--soft);font-weight:600;}
+  .kpi .kv{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;font-family:var(--mono);margin-top:3px;}
+  .kpi .ks{font-size:.72rem;color:var(--faint);margin-top:2px;}
+  .kpi.forecast{background:var(--amber-soft);border-color:var(--amber);}
+  .kpi.forecast .kv{color:#7a4d0f;}
+  .bars{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:18px;}
+  .bars h3{margin:0 0 14px;font-size:1rem;}
+  .barrow{margin-bottom:12px;}
+  .barrow .top{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px;}
+  .barrow .top .v{font-family:var(--mono);font-weight:700;}
+  .track{height:12px;background:#eef1f4;border-radius:6px;overflow:hidden;}
+  .fill{height:100%;background:var(--steel);border-radius:6px;}
+  .fill.poly{background:var(--blue);}
+  .fill.spin{background:var(--green);}
+  .fill.fc{background:var(--amber);}
+  .scope-toggle{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;margin-bottom:16px;}
+  .scope-toggle button{background:#fff;border:none;padding:7px 14px;font-size:.8rem;font-weight:600;color:var(--soft);}
+  .scope-toggle button.active{background:var(--steel);color:#fff;}
+  table.matrix{border-collapse:collapse;width:100%;min-width:640px;font-size:.82rem;}
+  table.matrix th,table.matrix td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;}
+  table.matrix th:first-child,table.matrix td:first-child{text-align:left;position:sticky;left:0;background:var(--panel);}
+  table.matrix thead th{background:#f6f8fa;color:var(--soft);font-size:.7rem;border-bottom:1px solid var(--line-strong);}
+  table.matrix tr.total td{font-weight:800;border-top:2px solid var(--line-strong);}
+  table.matrix .z{color:var(--faint);}
+  table.matrix .hlcol{background:var(--amber-soft);}
+  table.matrix thead th.hlcol{background:var(--amber);color:#fff;}
+
+  @media (max-width:560px){
+    .topbar{padding:0 12px;gap:10px;}
+    .whoami .info{display:none;}
+    main{padding:16px 12px 50px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= BOOT ================= -->
+<div id="boot" class="boot">Connecting…</div>
+
+<!-- ================= LOGIN ================= -->
+<div id="login" class="hidden">
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <div class="brand">
+      <div class="mark">iM</div>
+      <div class="tt">iMODA<span>Attendance &amp; OT Register</span></div>
+    </div>
+    <h1>Sign in</h1>
+    <p class="lsub">Use your Employee ID and password.</p>
+    <div id="loginErr" class="login-err hidden"></div>
+    <div class="field">
+      <label for="empId">Employee ID</label>
+      <input id="empId" name="username" placeholder="e.g. KF0107" autocapitalize="characters" spellcheck="false" required>
+    </div>
+    <div class="field">
+      <label for="pwd">Password</label>
+      <input id="pwd" name="password" type="password" placeholder="••••••••" required>
+    </div>
+    <button class="btn-primary" id="loginBtn" type="submit">Sign in</button>
+    <div class="login-foot">iMODA plant · internal use only</div>
+  </form>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div class="mark">iM</div>
+    <div class="title">iMODA <span>Attendance</span></div>
+    <div class="spacer"></div>
+    <div class="whoami">
+      <div class="info">
+        <div class="nm" id="uName">—</div>
+        <div class="rl" id="uRole">—</div>
+      </div>
+      <div class="avatar" id="uAvatar">–</div>
+      <button class="btn-ghost" id="logoutBtn">Sign out</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <main id="view"></main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* =====================================================================
+   iMODA Attendance — Phase 2 app  ·  STAGE 1: login + role-routed shell
+   Replace the two values below with your project's, then open the file.
+   (The anon key is a public browser key by design; RLS protects the data.)
+   ===================================================================== */
+const SUPABASE_URL = "https://iivipembfkrnjfftfuyi.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpdmlwZW1iZmtybmpmZnRmdXlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MzE0NDgsImV4cCI6MjEwNTEwNzQ0OH0.Cm9GZxkSD7ZY_6UXAzeN-dp8NiTZJxnReJoRL19SDMo";
+const EMAIL_DOMAIN = "@imoda.local";
+
+/* ---- role model (mirrors the frozen POC exactly) ---- */
+const ROLE = {
+  technician:'technician', supervisor:'supervisor', superintendent:'superintendent',
+  assistant_manager:'assistant_manager', officer:'officer',
+  section_head:'section_head', manager:'manager'
+};
+const ROLE_LABEL = {
+  technician:'Technician', supervisor:'Shift Supervisor', superintendent:'Shift Superintendent',
+  assistant_manager:'Assistant Manager', officer:'Officer',
+  section_head:'Section Head', manager:'Manager'
+};
+const REGISTER_HOLDERS = [ROLE.technician, ROLE.supervisor, ROLE.superintendent];
+const PERIOD_MANAGERS  = [ROLE.officer, ROLE.assistant_manager, ROLE.section_head];
+const OT_VIEWERS       = [ROLE.officer, ROLE.assistant_manager, ROLE.manager];
+const PEOPLE_MANAGERS  = [ROLE.officer, ROLE.section_head];  // + assistant_manager can edit assignments too
+const APPROVERS        = [ROLE.supervisor, ROLE.superintendent, ROLE.assistant_manager];
+
+/* ---- shift/day codes (verbatim from frozen POC) ---- */
+const SHIFT_CODES = [
+  {code:'NR',          label:'Normal',                  group:'work',   needsTime:true,  defIn:'08:30', defOut:'17:30', defOT:0},
+  {code:'Morning',     label:'Morning shift',           group:'work',   needsTime:true,  defIn:'07:00', defOut:'19:00', defOT:0},
+  {code:'Night',       label:'Night shift',             group:'work',   needsTime:true,  defIn:'19:00', defOut:'07:00', defOT:0},
+  {code:'Morning (PH)',label:'Morning (Public Holiday)',group:'ph',     needsTime:true,  defIn:'07:00', defOut:'19:00', defOT:12},
+  {code:'Night (PH)',  label:'Night (Public Holiday)',  group:'ph',     needsTime:true,  defIn:'19:00', defOut:'07:00', defOT:12},
+  {code:'OD',          label:'Off Day',                 group:'odrd',   needsTime:false, defIn:'',      defOut:'',      defOT:0},
+  {code:'RD',          label:'Rest Day',                group:'odrd',   needsTime:false, defIn:'',      defOut:'',      defOT:0},
+  {code:'AL',          label:'Annual Leave',            group:'leave',  needsTime:false, defIn:'',      defOut:'',      defOT:0},
+  {code:'NPL',         label:'No-Pay Leave',            group:'npl',    needsTime:false, defIn:'',      defOut:'',      defOT:0},
+  {code:'MC',          label:'Medical Leave',           group:'leave',  needsTime:false, defIn:'',      defOut:'',      defOT:0},
+  {code:'ABS',         label:'Absent',                  group:'deduct', needsTime:false, defIn:'',      defOut:'',      defOT:0},
+];
+const codeMeta = Object.fromEntries(SHIFT_CODES.map(c=>[c.code,c]));
+
+/* OT types — must match the ot_types lookup codes in the DB */
+const OT_TYPES = [
+  {code:'operation',label:'Operation'},{code:'maintenance',label:'Maintenance'},
+  {code:'annual_leave',label:'Annual Leave'},{code:'sick_leave_mc',label:'Sick Leave MC'},
+  {code:'5s',label:'5S'},{code:'training',label:'Training'},{code:'ph',label:'PH'},
+  {code:'others',label:'Others'},{code:'labo_work',label:'Labo Work'},{code:'plant_test',label:'Plant Test'},
+];
+const otLabel = Object.fromEntries(OT_TYPES.map(t=>[t.code,t.label]));
+const STATUS = {DRAFT:'Draft',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Rejected'};
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const state = { me:null, tab:null, periods:[], period:null, pendingCount:0 };
+
+const $ = id => document.getElementById(id);
+const show = el => el.classList.remove('hidden');
+const hide = el => el.classList.add('hidden');
+
+/* ---- boot: is there already a session? ---- */
+(async function boot(){
+  if(SUPABASE_URL.startsWith("PASTE_")){
+    $('boot').innerHTML = "⚠ Set SUPABASE_URL and SUPABASE_ANON_KEY at the top of this file first.";
+    return;
+  }
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ await loadMe(); }
+  else { hide($('boot')); show($('login')); $('empId').focus(); }
+})();
+
+/* ---- login ---- */
+$('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const empId = $('empId').value.trim().toLowerCase();
+  const pwd   = $('pwd').value;
+  if(!empId || !pwd) return;
+  hide($('loginErr'));
+  $('loginBtn').disabled = true; $('loginBtn').textContent = 'Signing in…';
+  const email = empId + EMAIL_DOMAIN;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
+  if(error){
+    $('loginErr').textContent = "Sign-in failed. Check your Employee ID and password.";
+    show($('loginErr'));
+    $('loginBtn').disabled = false; $('loginBtn').textContent = 'Sign in';
+    return;
+  }
+  await loadMe();
+});
+
+/* ---- load the signed-in person's employee row ---- */
+async function loadMe(){
+  hide($('login')); hide($('app')); show($('boot'));
+  $('boot').textContent = 'Loading your workspace…';
+  const { data:{ user } } = await sb.auth.getUser();
+  const { data: me, error } = await sb.from('employees')
+    .select('id, emp_id, name, position, role_code, default_section, default_shift')
+    .eq('auth_user_id', user.id).maybeSingle();
+  if(error || !me){
+    $('boot').textContent = 'Signed in, but no employee record is linked to this account.';
+    return;
+  }
+  state.me = me;
+  await loadPeriods();
+  await enterApp();
+}
+
+async function loadPeriods(){
+  const { data } = await sb.from('periods').select('*').order('start_date',{ascending:false});
+  state.periods = data || [];
+  state.period = state.periods[0] || null;
+}
+
+/* ---- enter the app shell ---- */
+async function enterApp(){
+  const me = state.me;
+  $('uName').textContent = me.name;
+  $('uRole').textContent = ROLE_LABEL[me.role_code] + roleQualifier(me);
+  $('uAvatar').textContent = initials(me.name);
+  state.tab = defaultTab(me.role_code);
+  hide($('boot')); hide($('login')); show($('app'));
+  await refreshPendingCount();
+  renderTabs();
+  renderView();
+}
+
+/* count registers submitted to me and awaiting my decision, this period */
+async function refreshPendingCount(){
+  state.pendingCount = 0;
+  if(!state.period || !APPROVERS.includes(state.me.role_code)) return;
+  const { data:assigns } = await sb.from('assignments')
+    .select('employee_id').eq('period_id',state.period.id).eq('approver_id',state.me.id);
+  const ids=(assigns||[]).map(a=>a.employee_id);
+  if(!ids.length) return;
+  const { count } = await sb.from('submissions')
+    .select('id',{count:'exact',head:true})
+    .eq('period_id',state.period.id).eq('status',STATUS.SUBMITTED).in('employee_id',ids);
+  state.pendingCount = count||0;
+}
+
+function roleQualifier(me){
+  if(me.role_code===ROLE.section_head && me.default_section)
+    return ' · ' + (me.default_section==='poly'?'Poly':'Spinning');
+  if(REGISTER_HOLDERS.includes(me.role_code)){
+    const bits=[];
+    if(me.default_section) bits.push(me.default_section==='poly'?'Poly':'Spinning');
+    if(me.default_shift) bits.push('Shift '+me.default_shift);
+    if(bits.length) return ' · '+bits.join(' ');
+  }
+  return '';
+}
+
+/* ---- tab set per role (mirrors POC renderTabs) ---- */
+function tabsFor(r){
+  const tabs=[];
+  const badge = state.pendingCount>0 ? ` <span class="count">${state.pendingCount}</span>` : '';
+  if(REGISTER_HOLDERS.includes(r)) tabs.push(['own','My register']);
+  if(r===ROLE.supervisor||r===ROLE.superintendent) tabs.push(['approvals','Approvals'+badge]);
+  if(r===ROLE.assistant_manager){ tabs.push(['approvals','Approvals'+badge]); tabs.push(['overview','View all']); }
+  if(r===ROLE.manager) tabs.push(['overview','View all']);
+  if(r===ROLE.section_head) tabs.push(['overview','Section overview']);
+  if(OT_VIEWERS.includes(r)){ tabs.push(['analysis','OT analysis']); tabs.push(['summary','OT summary']); }
+  if(PERIOD_MANAGERS.includes(r)) tabs.push(['periods','Manage periods']);
+  if(PEOPLE_MANAGERS.includes(r)||r===ROLE.assistant_manager) tabs.push(['people','People & groups']);
+  return tabs;
+}
+
+function defaultTab(r){
+  if(r===ROLE.supervisor||r===ROLE.superintendent) return 'own';
+  if(r===ROLE.assistant_manager) return 'approvals';
+  if(r===ROLE.officer) return 'analysis';
+  if(r===ROLE.section_head) return 'overview';
+  if(r===ROLE.manager) return 'overview';
+  return 'own';
+}
+
+function renderTabs(){
+  const tabs = tabsFor(state.me.role_code);
+  $('tabs').innerHTML = tabs.map(([k,lbl])=>
+    `<button class="tab ${state.tab===k?'active':''}" data-tab="${k}">${lbl}</button>`).join('');
+  $('tabs').querySelectorAll('.tab').forEach(b=>{
+    b.onclick = ()=>{ state.tab=b.dataset.tab; apxState.openEmp=null; renderTabs(); renderView(); };
+  });
+}
+
+/* ---- period selector (shown on data tabs) ---- */
+function periodBar(){
+  if(!state.periods.length) return `<div class="period-bar"><span class="pl">No periods yet.</span></div>`;
+  const opts = state.periods.map(p=>
+    `<option value="${p.id}" ${state.period&&p.id===state.period.id?'selected':''}>${p.title}</option>`).join('');
+  const locked = state.period && state.period.locked;
+  return `<div class="period-bar">
+    <span class="pl">Period</span>
+    <select id="periodSel">${opts}</select>
+    ${state.period?`<span class="lock-badge ${locked?'locked':'open'}">${locked?'LOCKED':'OPEN'}</span>`:''}
+    <span class="pl" style="margin-left:auto;">${state.period?state.period.start_date+' → '+state.period.end_date:''}</span>
+  </div>`;
+}
+
+/* ---- view router ---- */
+async function renderView(){
+  const r = state.me.role_code, t = state.tab;
+  const dataTabs = ['own','approvals','overview','analysis','summary'];
+  const bar = dataTabs.includes(t) ? periodBar() : '';
+
+  if(t==='own'){
+    $('view').innerHTML = bar + `<div id="regHost"><div class="placeholder"><p>Loading your register…</p></div></div>`;
+    bindPeriodSel();
+    await renderRegister();
+    return;
+  }
+
+  if(t==='approvals'){
+    $('view').innerHTML = bar + `<div id="apxHost"><div class="placeholder"><p>Loading approvals…</p></div></div>`;
+    bindPeriodSel();
+    await renderApprovals();
+    return;
+  }
+
+  if(t==='overview'){
+    $('view').innerHTML = bar + `<div id="ovHost"><div class="placeholder"><p>Loading…</p></div></div>`;
+    bindPeriodSel();
+    await renderOverview();
+    return;
+  }
+
+  if(t==='periods'){
+    $('view').innerHTML = `<div id="perHost"><div class="placeholder"><p>Loading periods…</p></div></div>`;
+    await renderManagePeriods();
+    return;
+  }
+
+  if(t==='people'){
+    $('view').innerHTML = bar + `<div id="pplHost"><div class="placeholder"><p>Loading…</p></div></div>`;
+    bindPeriodSel();
+    await renderPeople();
+    return;
+  }
+
+  if(t==='analysis'){
+    $('view').innerHTML = bar + `<div id="anHost"><div class="placeholder"><p>Loading OT analysis…</p></div></div>`;
+    bindPeriodSel();
+    await renderOTAnalysis();
+    return;
+  }
+
+  if(t==='summary'){
+    $('view').innerHTML = `<div id="smHost"><div class="placeholder"><p>Loading OT summary…</p></div></div>`;
+    await renderOTSummary();
+    return;
+  }
+
+  $('view').innerHTML = bar + placeholder(t);
+  bindPeriodSel();
+}
+
+function bindPeriodSel(){
+  const sel = $('periodSel');
+  if(sel) sel.onchange = async ()=>{
+    state.period = state.periods.find(p=>p.id===sel.value);
+    await refreshPendingCount(); renderTabs();
+    renderView();
+  };
+}
+
+/* =====================================================================
+   REGISTER (Stage 2)  — daily grid for the signed-in holder, own data
+   ===================================================================== */
+let regModel = { dates:[], byDate:{}, submission:null, dirty:{} };
+
+function datesInPeriod(p){
+  const out=[]; const s=new Date(p.start_date+'T00:00:00'); const e=new Date(p.end_date+'T00:00:00');
+  for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)) out.push(d.toISOString().slice(0,10));
+  return out;
+}
+function fmtDate(ymd){
+  const d=new Date(ymd+'T00:00:00');
+  const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  return {day:d.getDate(),dow,mon,isWeekend:[0,6].includes(d.getDay())};
+}
+function to12h(hhmm){
+  if(!hhmm) return '';
+  const [h,m]=hhmm.split(':').map(Number);
+  const ap=h<12?'AM':'PM'; const h12=h%12===0?12:h%12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ap}`;
+}
+
+async function renderRegister(){
+  const host = $('regHost');
+  if(!state.period){ host.innerHTML=`<div class="placeholder"><p>No period selected.</p></div>`; return; }
+  const me = state.me;
+
+  // fetch this person's attendance + submission for the period (RLS: own rows)
+  const [{data:recs,error:rErr},{data:sub}] = await Promise.all([
+    sb.from('attendance_records').select('*').eq('employee_id',me.id).eq('period_id',state.period.id),
+    sb.from('submissions').select('*').eq('employee_id',me.id).eq('period_id',state.period.id).maybeSingle()
+  ]);
+  if(rErr){ host.innerHTML=`<div class="note red">Could not load your register: ${rErr.message}</div>`; return; }
+
+  regModel.dates = datesInPeriod(state.period);
+  regModel.byDate = {};
+  (recs||[]).forEach(r=> regModel.byDate[r.work_date]=r);
+  regModel.submission = sub || {status:STATUS.DRAFT};
+  regModel.dirty = {};
+
+  const status = regModel.submission.status || STATUS.DRAFT;
+  const locked = state.period.locked || status===STATUS.SUBMITTED || status===STATUS.APPROVED;
+
+  let rows=''; let lastMon=null;
+  regModel.dates.forEach(date=>{
+    const rec = regModel.byDate[date] || {work_date:date,shift_code:'OD',time_in:'',time_out:'',ot_hours:0,ot_type_code:'',remarks:''};
+    const {day,dow,mon,isWeekend}=fmtDate(date);
+    const meta=codeMeta[rec.shift_code]||codeMeta['OD'];
+    const mb=lastMon!==null&&mon!==lastMon; lastMon=mon;
+    const hasOT=(Number(rec.ot_hours)||0)>0;
+    const dis = locked?'disabled':'';
+    const tdis = (!meta.needsTime||locked)?'disabled':'';
+    rows+=`<tr class="${isWeekend?'weekend':''} ${mb?'mbreak':''}" data-date="${date}">
+      <td class="daycell"><span class="d">${String(day).padStart(2,'0')}</span><span class="w">${dow}</span><span class="m">${mon}</span></td>
+      <td class="${locked?'disabled':''}"><select class="cell-ctl code" data-f="shift_code" ${dis}>${SHIFT_CODES.map(c=>`<option value="${c.code}" ${c.code===rec.shift_code?'selected':''}>${c.code} — ${c.label}</option>`).join('')}</select></td>
+      <td class="${tdis?'disabled':''}"><input type="time" step="60" class="cell-ctl t" data-f="time_in" value="${rec.time_in||''}" ${tdis}></td>
+      <td class="${tdis?'disabled':''}"><input type="time" step="60" class="cell-ctl t" data-f="time_out" value="${rec.time_out||''}" ${tdis}></td>
+      <td class="${locked?'disabled':''}"><input type="number" min="0" step="0.5" class="cell-ctl oth" data-f="ot_hours" value="${rec.ot_hours||0}" ${dis}></td>
+      <td class="${(locked||!hasOT)?'disabled':''}"><select class="cell-ctl ottype" data-f="ot_type_code" ${(locked||!hasOT)?'disabled':''}><option value="">${hasOT?'— select —':'—'}</option>${OT_TYPES.map(t=>`<option value="${t.code}" ${t.code===rec.ot_type_code?'selected':''}>${t.label}</option>`).join('')}</select></td>
+      <td class="hide-sm ${locked?'disabled':''}"><input type="text" class="cell-ctl rsn" data-f="remarks" placeholder="Remarks" value="${(rec.remarks||'').replace(/"/g,'&quot;')}" ${dis}></td>
+    </tr>`;
+  });
+
+  const sum = computeSummary();
+  const rejNote = status===STATUS.REJECTED && regModel.submission.reject_reason
+    ? `<div class="note red"><strong>Sent back:</strong> ${regModel.submission.reject_reason}</div>` : '';
+  const lockNote = state.period.locked ? `<div class="note amber">This period is locked. Records are read-only.</div>`
+    : (status===STATUS.SUBMITTED?`<div class="note amber">Submitted and awaiting approval — read-only until approved or sent back.</div>`
+    : (status===STATUS.APPROVED?`<div class="note green">Approved. This register is final.</div>`:''));
+
+  host.innerHTML = `
+    ${rejNote}${lockNote}
+    <div class="reg-head">
+      <div>
+        <div class="nm">${me.name}</div>
+        <div class="meta">${me.emp_id} · ${me.position||''} · ${qualLine(me)}</div>
+      </div>
+      <span class="status-badge ${status}">${status}</span>
+    </div>
+    <div class="reg-wrap">
+      <table class="reg">
+        <thead><tr><th style="width:96px;">Date</th><th>Day type</th><th>Time in</th><th>Time out</th><th>OT hrs</th><th>OT type</th><th class="hide-sm">Remarks</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="reg-foot">
+      <div class="sumline">
+        <span class="chip" data-sum="work">Worked <b>${sum.work}</b></span>
+        <span class="chip" data-sum="odrd">Off/Rest <b>${sum.odrd}</b></span>
+        <span class="chip" data-sum="leave">Leave <b>${sum.leave}</b></span>
+        <span class="chip ot" data-sum="ot">OT total <b>${sum.ot}h</b></span>
+      </div>
+    </div>
+    ${locked?'':`<div class="savebar">
+      <span class="dirty-note hidden" id="dirtyNote">Unsaved changes</span>
+      <button class="btn" id="saveBtn" disabled>Save draft</button>
+      <button class="btn primary" id="submitBtn">Submit period</button>
+    </div>`}
+  `;
+
+  if(!locked) wireRegisterEvents();
+}
+
+function qualLine(me){
+  const bits=[];
+  if(me.default_section) bits.push(me.default_section==='poly'?'Poly':'Spinning');
+  if(me.default_shift) bits.push('Shift '+me.default_shift);
+  return bits.join(' · ');
+}
+
+function computeSummary(){
+  let work=0,odrd=0,leave=0,ot=0;
+  regModel.dates.forEach(date=>{
+    const rec = pendingRec(date);
+    const m=codeMeta[rec.shift_code]; if(!m) return;
+    if(m.group==='work'||m.group==='ph') work++;
+    else if(m.group==='odrd') odrd++;
+    else if(m.group==='leave'||m.group==='npl') leave++;
+    ot += Number(rec.ot_hours)||0;
+  });
+  return {work,odrd,leave,ot:Math.round(ot*10)/10};
+}
+
+/* merged view of a row: saved record + any pending edit */
+function pendingRec(date){
+  const base = regModel.byDate[date] || {work_date:date,shift_code:'OD',time_in:'',time_out:'',ot_hours:0,ot_type_code:'',remarks:''};
+  return Object.assign({}, base, regModel.dirty[date]||{});
+}
+
+function wireRegisterEvents(){
+  const tbody = $('view').querySelector('table.reg tbody');
+  tbody.addEventListener('change', onCellChange);
+  tbody.addEventListener('input', onCellChange);
+  $('saveBtn').onclick = saveDraft;
+  $('submitBtn').onclick = submitPeriod;
+}
+
+function onCellChange(e){
+  const ctl = e.target.closest('.cell-ctl'); if(!ctl) return;
+  const tr = ctl.closest('tr'); const date = tr.dataset.date; const f = ctl.dataset.f;
+  regModel.dirty[date] = regModel.dirty[date] || {};
+  let val = ctl.value;
+  if(f==='ot_hours') val = Number(val)||0;
+  regModel.dirty[date][f] = val;
+
+  // auto-fill default times + PH OT when the day-type changes
+  if(f==='shift_code'){
+    const meta = codeMeta[val] || codeMeta['OD'];
+    regModel.dirty[date].time_in  = meta.needsTime ? (meta.defIn||'') : '';
+    regModel.dirty[date].time_out = meta.needsTime ? (meta.defOut||'') : '';
+    if(meta.group==='ph'){ regModel.dirty[date].ot_hours = meta.defOT; regModel.dirty[date].ot_type_code='ph'; }
+    refreshRow(tr, date);
+  }
+  // OT hours changed: clear type when 0, and always re-sync the row so the
+  // OT-type dropdown enables/disables to match (this was the bug).
+  if(f==='ot_hours'){
+    if((Number(val)||0)===0) regModel.dirty[date].ot_type_code = '';
+    refreshRow(tr, date, 'ot_hours');
+  }
+  markDirty();
+  updateSummary();  // live totals on every edit
+}
+
+function refreshRow(tr, date, skipField){
+  const rec = pendingRec(date);
+  const meta = codeMeta[rec.shift_code]||codeMeta['OD'];
+  const hasOT = (Number(rec.ot_hours)||0)>0;
+  const ti=tr.querySelector('[data-f=time_in]'), to=tr.querySelector('[data-f=time_out]');
+  ti.value=rec.time_in||''; to.value=rec.time_out||'';
+  ti.disabled=!meta.needsTime; to.disabled=!meta.needsTime;
+  ti.closest('td').classList.toggle('disabled',!meta.needsTime);
+  to.closest('td').classList.toggle('disabled',!meta.needsTime);
+  const oth=tr.querySelector('[data-f=ot_hours]');
+  if(skipField!=='ot_hours') oth.value=rec.ot_hours||0;   // don't clobber active typing
+  const ott=tr.querySelector('[data-f=ot_type_code]');
+  ott.value=rec.ot_type_code||''; ott.disabled=!hasOT;
+  ott.closest('td').classList.toggle('disabled',!hasOT);
+}
+
+function markDirty(){
+  const has = Object.keys(regModel.dirty).length>0;
+  const note=$('dirtyNote'), btn=$('saveBtn');
+  if(note) note.classList.toggle('hidden',!has);
+  if(btn) btn.disabled=!has;
+}
+
+function updateSummary(){
+  const s = computeSummary();
+  const host = $('view');
+  const set=(cls,val)=>{ const el=host.querySelector('[data-sum='+cls+'] b'); if(el) el.textContent=val; };
+  set('work',s.work); set('odrd',s.odrd); set('leave',s.leave); set('ot',s.ot+'h');
+}
+
+/* build the rows to upsert from current pending state (only changed dates) */
+function rowsToSave(){
+  return Object.keys(regModel.dirty).map(date=>{
+    const rec = pendingRec(date);
+    return {
+      employee_id: state.me.id,
+      period_id: state.period.id,
+      work_date: date,
+      shift_code: rec.shift_code,
+      time_in: rec.time_in || null,
+      time_out: rec.time_out || null,
+      ot_hours: Number(rec.ot_hours)||0,
+      ot_type_code: (Number(rec.ot_hours)||0)>0 ? (rec.ot_type_code||null) : null,
+      remarks: rec.remarks || null,
+    };
+  });
+}
+
+async function ensureSubmissionRow(status){
+  // upsert the submission row for this person+period
+  const payload = {employee_id:state.me.id, period_id:state.period.id, status};
+  const { error } = await sb.from('submissions')
+    .upsert(payload, {onConflict:'employee_id,period_id'});
+  return error;
+}
+
+async function saveDraft(){
+  const rows = rowsToSave();
+  if(!rows.length){ toast('Nothing to save'); return; }
+  // validation: OT hours require a type
+  for(const r of rows){
+    if(r.ot_hours>0 && !r.ot_type_code){ toast('Pick an OT type where OT hours are entered'); return; }
+  }
+  $('saveBtn').disabled=true;
+  // make sure a submission row exists (Draft) so status is tracked
+  await ensureSubmissionRow(regModel.submission.status||STATUS.DRAFT);
+  const { error } = await sb.from('attendance_records')
+    .upsert(rows, {onConflict:'employee_id,work_date'});
+  if(error){ toast('Save failed: '+error.message); $('saveBtn').disabled=false; return; }
+  toast('Draft saved');
+  await renderRegister();
+}
+
+async function submitPeriod(){
+  // save any pending edits first
+  const rows = rowsToSave();
+  for(const r of rows){
+    if(r.ot_hours>0 && !r.ot_type_code){ toast('Pick an OT type where OT hours are entered'); return; }
+  }
+  if(!confirm('Submit this period for approval? You won\u2019t be able to edit until it\u2019s approved or sent back.')) return;
+  $('submitBtn').disabled=true;
+  if(rows.length){
+    const { error:e1 } = await sb.from('attendance_records').upsert(rows,{onConflict:'employee_id,work_date'});
+    if(e1){ toast('Save failed: '+e1.message); $('submitBtn').disabled=false; return; }
+  }
+  const err = await sb.from('submissions').upsert(
+    {employee_id:state.me.id, period_id:state.period.id, status:STATUS.SUBMITTED, submitted_at:new Date().toISOString()},
+    {onConflict:'employee_id,period_id'}
+  ).then(r=>r.error);
+  if(err){ toast('Submit failed: '+err.message); $('submitBtn').disabled=false; return; }
+  toast('Submitted for approval');
+  await renderRegister();
+}
+
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+/* =====================================================================
+   APPROVALS (Stage 3)
+   Approver sees registers submitted to them (RLS: assignments.approver_id
+   = me). Whole-period approve / send-back with audit trail.
+   ===================================================================== */
+let apxState = { openEmp:null };
+
+async function renderApprovals(){
+  const host=$('apxHost');
+  if(!state.period){ host.innerHTML=`<div class="queue-empty">No period selected.</div>`; return; }
+
+  if(apxState.openEmp){ await renderReview(host, apxState.openEmp); return; }
+
+  // find the people this user approves this period
+  const { data:assigns, error } = await sb.from('assignments')
+    .select('employee_id, section, shift, employees:employee_id(emp_id,name,position,role_code)')
+    .eq('period_id', state.period.id).eq('approver_id', state.me.id);
+  if(error){ host.innerHTML=`<div class="note red">${error.message}</div>`; return; }
+  if(!assigns || !assigns.length){
+    host.innerHTML=`<div class="queue-empty">No one is assigned to you for approval this period.</div>`; return;
+  }
+
+  const empIds = assigns.map(a=>a.employee_id);
+  const [{data:subs},{data:atts}] = await Promise.all([
+    sb.from('submissions').select('employee_id,status,submitted_at').eq('period_id',state.period.id).in('employee_id',empIds),
+    sb.from('attendance_records').select('employee_id,ot_hours').eq('period_id',state.period.id).in('employee_id',empIds)
+  ]);
+  const subBy={}; (subs||[]).forEach(s=>subBy[s.employee_id]=s);
+  const otBy={}; (atts||[]).forEach(a=>{ otBy[a.employee_id]=(otBy[a.employee_id]||0)+(Number(a.ot_hours)||0); });
+
+  // order: submitted first, then rejected, then draft/approved
+  const rank=st=> st===STATUS.SUBMITTED?0 : st===STATUS.REJECTED?1 : st===STATUS.DRAFT?2 : 3;
+  assigns.sort((a,b)=> rank((subBy[a.employee_id]||{}).status||STATUS.DRAFT) - rank((subBy[b.employee_id]||{}).status||STATUS.DRAFT));
+
+  const pending = assigns.filter(a=> (subBy[a.employee_id]||{}).status===STATUS.SUBMITTED).length;
+  const cards = assigns.map(a=>{
+    const e=a.employees; const st=(subBy[a.employee_id]||{}).status||STATUS.DRAFT;
+    const ot=Math.round((otBy[a.employee_id]||0)*10)/10;
+    const secShift=[a.section?(a.section==='poly'?'Poly':'Spinning'):'',a.shift?'Shift '+a.shift:''].filter(Boolean).join(' · ');
+    return `<div class="qcard" data-emp="${a.employee_id}">
+      <div class="qav">${initials(e.name)}</div>
+      <div class="qmain">
+        <div class="qn">${e.name}</div>
+        <div class="qm">${e.emp_id} · ${secShift||ROLE_LABEL[e.role_code]}</div>
+      </div>
+      <span class="qot">OT ${ot}h</span>
+      <span class="status-badge ${st}">${st}</span>
+      <span class="qarrow">›</span>
+    </div>`;
+  }).join('');
+
+  host.innerHTML = `
+    <div class="note ${pending?'amber':'green'}">${pending? pending+' register'+(pending>1?'s':'')+' awaiting your approval' : 'Nothing pending — all caught up.'}</div>
+    <div class="queue">${cards}</div>`;
+  host.querySelectorAll('.qcard').forEach(c=>{
+    c.onclick=()=>{ apxState.openEmp=c.dataset.emp; renderApprovals(); };
+  });
+}
+
+async function renderReview(host, empId){
+  // load the target employee, their assignment, submission, and records
+  const [{data:emp},{data:assign},{data:sub},{data:recs}] = await Promise.all([
+    sb.from('employees').select('*').eq('id',empId).maybeSingle(),
+    sb.from('assignments').select('*').eq('employee_id',empId).eq('period_id',state.period.id).maybeSingle(),
+    sb.from('submissions').select('*').eq('employee_id',empId).eq('period_id',state.period.id).maybeSingle(),
+    sb.from('attendance_records').select('*').eq('employee_id',empId).eq('period_id',state.period.id)
+  ]);
+  const status=(sub&&sub.status)||STATUS.DRAFT;
+  const canAct = status===STATUS.SUBMITTED && !state.period.locked;
+
+  const gridHtml = readonlyRegister(emp, assign, recs||[]);
+  const approverName = state.me.name;
+
+  const signHtml = (status===STATUS.APPROVED||status===STATUS.REJECTED) ? `
+    <div class="sign-row">
+      <div class="sig">Decision <b>${status}</b></div>
+      <div class="sig">By <b>${approverName}</b></div>
+      <div class="sig">When <b>${sub.approved_at?new Date(sub.approved_at).toLocaleString():'—'}</b></div>
+    </div>
+    ${sub.reject_reason?`<div class="note red" style="margin-top:12px;"><strong>Note:</strong> ${sub.reject_reason}</div>`:''}` : '';
+
+  host.innerHTML = `
+    <button class="review-back" id="backBtn">‹ Back to queue</button>
+    ${gridHtml}
+    <div class="approve-box">
+      <h3>${canAct?'Review &amp; decide':'Decision'}</h3>
+      ${canAct?`
+        <textarea id="apxNote" placeholder="Optional note (required if sending back)…"></textarea>
+        <div class="approve-actions">
+          <button class="btn green" id="approveBtn">Approve period</button>
+          <button class="btn red" id="rejectBtn">Send back</button>
+        </div>
+      `: (status===STATUS.SUBMITTED && state.period.locked
+          ? `<div class="note amber">Period is locked — no changes allowed.</div>`
+          : status===STATUS.DRAFT || status===STATUS.REJECTED
+            ? `<div class="note">Not submitted yet — nothing to approve.</div>`
+            : signHtml)}
+    </div>`;
+
+  $('backBtn').onclick=()=>{ apxState.openEmp=null; renderApprovals(); };
+  if(canAct){
+    $('approveBtn').onclick=()=>decide(empId, STATUS.APPROVED);
+    $('rejectBtn').onclick =()=>decide(empId, STATUS.REJECTED);
+  }
+}
+
+async function decide(empId, decision){
+  const noteEl=$('apxNote'); const note=noteEl?noteEl.value.trim():'';
+  if(decision===STATUS.REJECTED && !note){ toast('A note is required when sending back'); return; }
+  $('approveBtn').disabled=true; $('rejectBtn').disabled=true;
+  const patch={
+    status:decision,
+    approver_id:state.me.id, approved_at:new Date().toISOString(),
+    reject_reason: decision===STATUS.REJECTED ? note : (note||null)
+  };
+  // UPDATE (not upsert): the submission row already exists once submitted,
+  // and the approver RLS policy governs UPDATE, not INSERT.
+  const { data, error } = await sb.from('submissions')
+    .update(patch)
+    .eq('employee_id',empId).eq('period_id',state.period.id)
+    .select();
+  if(error){ toast('Failed: '+error.message); $('approveBtn').disabled=false; $('rejectBtn').disabled=false; return; }
+  if(!data || !data.length){ toast('No change — you may not be the assigned approver for this period.'); $('approveBtn').disabled=false; $('rejectBtn').disabled=false; return; }
+  toast(decision===STATUS.APPROVED?'Approved':'Sent back');
+  apxState.openEmp=null;
+  await refreshPendingCount(); renderTabs();
+  renderApprovals();
+}
+
+/* =====================================================================
+   OVERVIEW (Stage 3) — read-only registers within the user's scope
+   ===================================================================== */
+async function renderOverview(){
+  const host=$('ovHost');
+  if(!state.period){ host.innerHTML=`<div class="queue-empty">No period selected.</div>`; return; }
+  if(apxState.openEmp){ // reuse review panel in read-only (no actions since not approver)
+    await renderReadonlyDetail(host, apxState.openEmp); return;
+  }
+
+  // scope: section_head -> own section; others (asst mgr, manager) -> all holders
+  let q = sb.from('assignments')
+    .select('employee_id, section, shift, employees:employee_id(emp_id,name,position,role_code)')
+    .eq('period_id', state.period.id);
+  const { data:assigns, error } = await q;
+  if(error){ host.innerHTML=`<div class="note red">${error.message}</div>`; return; }
+
+  let list = (assigns||[]).filter(a=> REGISTER_HOLDERS.includes(a.employees.role_code));
+  if(state.me.role_code===ROLE.section_head && state.me.default_section){
+    // heads see technicians of their own section, plus supervisors/superintendents (who span sections)
+    list = list.filter(a=>
+      a.employees.role_code!==ROLE.technician || a.section===state.me.default_section);
+  }
+  if(!list.length){ host.innerHTML=`<div class="queue-empty">No registers in scope.</div>`; return; }
+
+  const empIds=list.map(a=>a.employee_id);
+  const [{data:subs},{data:atts}]=await Promise.all([
+    sb.from('submissions').select('employee_id,status').eq('period_id',state.period.id).in('employee_id',empIds),
+    sb.from('attendance_records').select('employee_id,ot_hours').eq('period_id',state.period.id).in('employee_id',empIds)
+  ]);
+  const subBy={}; (subs||[]).forEach(s=>subBy[s.employee_id]=s);
+  const otBy={}; (atts||[]).forEach(a=>{otBy[a.employee_id]=(otBy[a.employee_id]||0)+(Number(a.ot_hours)||0);});
+
+  const cards=list.map(a=>{
+    const e=a.employees; const st=(subBy[a.employee_id]||{}).status||STATUS.DRAFT;
+    const ot=Math.round((otBy[a.employee_id]||0)*10)/10;
+    const secShift=[a.section?(a.section==='poly'?'Poly':'Spinning'):'',a.shift?'Shift '+a.shift:''].filter(Boolean).join(' · ');
+    const hay=(e.name+' '+e.emp_id+' '+(a.section||'')+' '+(a.shift||'')).toLowerCase();
+    return `<div class="qcard" data-emp="${a.employee_id}" data-search="${hay}">
+      <div class="qav">${initials(e.name)}</div>
+      <div class="qmain"><div class="qn">${e.name}</div><div class="qm">${e.emp_id} · ${secShift||ROLE_LABEL[e.role_code]}</div></div>
+      <span class="qot">OT ${ot}h</span><span class="status-badge ${st}">${st}</span><span class="qarrow">›</span>
+    </div>`;
+  }).join('');
+  host.innerHTML=`
+    <div class="searchbar"><input type="text" id="ovSearch" placeholder="Search by name, ID, section or shift…" autocomplete="off"><span class="scount" id="ovCount">${list.length} people</span></div>
+    <div class="queue" id="ovQueue">${cards}</div>`;
+  const wire=()=> host.querySelectorAll('.qcard').forEach(c=> c.onclick=()=>{ apxState.openEmp=c.dataset.emp; renderOverview(); });
+  wire();
+  const search=$('ovSearch');
+  search.oninput=()=>{
+    const q=search.value.trim().toLowerCase();
+    let shown=0;
+    host.querySelectorAll('.qcard').forEach(c=>{
+      const hit=!q||c.dataset.search.includes(q);
+      c.style.display=hit?'':'none'; if(hit) shown++;
+    });
+    $('ovCount').textContent=shown+' '+(shown===1?'person':'people');
+  };
+}
+
+async function renderReadonlyDetail(host, empId){
+  const [{data:emp},{data:assign},{data:sub},{data:recs}]=await Promise.all([
+    sb.from('employees').select('*').eq('id',empId).maybeSingle(),
+    sb.from('assignments').select('*').eq('employee_id',empId).eq('period_id',state.period.id).maybeSingle(),
+    sb.from('submissions').select('*').eq('employee_id',empId).eq('period_id',state.period.id).maybeSingle(),
+    sb.from('attendance_records').select('*').eq('employee_id',empId).eq('period_id',state.period.id)
+  ]);
+  const status=(sub&&sub.status)||STATUS.DRAFT;
+  host.innerHTML=`
+    <button class="review-back" id="backBtn2">‹ Back</button>
+    ${readonlyRegister(emp, assign, recs||[])}
+    ${sub&&sub.reject_reason?`<div class="note red" style="margin-top:12px;"><strong>Note:</strong> ${sub.reject_reason}</div>`:''}`;
+  $('backBtn2').onclick=()=>{ apxState.openEmp=null; renderOverview(); };
+}
+
+/* =====================================================================
+   MANAGE PERIODS (Stage 4a)
+   Create periods, edit cut-off dates, lock/unlock. Managers only (RLS
+   also enforces this). Locking makes all records in the period read-only.
+   ===================================================================== */
+async function renderManagePeriods(){
+  const host=$('perHost');
+  const { data:periods, error } = await sb.from('periods').select('*').order('start_date',{ascending:false});
+  if(error){ host.innerHTML=`<div class="note red">${error.message}</div>`; return; }
+
+  // record counts per period (best-effort)
+  const counts={};
+  for(const p of (periods||[])){
+    const { count } = await sb.from('attendance_records').select('id',{count:'exact',head:true}).eq('period_id',p.id);
+    counts[p.id]=count||0;
+  }
+
+  const rows=(periods||[]).map(p=>`
+    <tr data-pid="${p.id}">
+      <td><strong>${p.title}</strong></td>
+      <td><input type="date" class="pf" data-f="start_date" value="${p.start_date}"></td>
+      <td><input type="date" class="pf" data-f="end_date" value="${p.end_date}"></td>
+      <td>${counts[p.id]}</td>
+      <td><span class="status-badge ${p.locked?'Rejected':'Approved'}">${p.locked?'Locked':'Open'}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm save-period">Save dates</button>
+        <button class="btn btn-sm ${p.locked?'green':'red'} toggle-lock">${p.locked?'Unlock':'Lock'}</button>
+      </td>
+    </tr>`).join('');
+
+  host.innerHTML=`
+    <div class="admin-head">
+      <h2>Manage periods</h2>
+      <button class="btn primary btn-sm" id="addPeriodBtn">+ Add next period</button>
+    </div>
+    <div class="admin-note">Edit cut-off dates, or lock a period to freeze it for payroll (all its records become read-only).</div>
+    <div class="atable"><table class="list">
+      <thead><tr><th>Period</th><th>Start date</th><th>End date</th><th>Records</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="6" style="text-align:center;color:var(--soft);padding:24px;">No periods yet.</td></tr>`}</tbody>
+    </table></div>`;
+
+  host.querySelectorAll('.save-period').forEach(b=> b.onclick=savePeriodDates);
+  host.querySelectorAll('.toggle-lock').forEach(b=> b.onclick=toggleLock);
+  const add=$('addPeriodBtn'); if(add) add.onclick=addNextPeriod;
+}
+
+async function savePeriodDates(e){
+  const tr=e.target.closest('tr'); const pid=tr.dataset.pid;
+  const start=tr.querySelector('[data-f=start_date]').value;
+  const end=tr.querySelector('[data-f=end_date]').value;
+  if(!start||!end){ toast('Both dates are required'); return; }
+  if(start>end){ toast('Start must be on or before end'); return; }
+  const { error } = await sb.from('periods').update({start_date:start,end_date:end}).eq('id',pid).select();
+  if(error){ toast('Failed: '+error.message); return; }
+  toast('Dates saved');
+  await loadPeriods(); renderTabs(); renderManagePeriods();
+}
+
+async function toggleLock(e){
+  const tr=e.target.closest('tr'); const pid=tr.dataset.pid;
+  const { data:p } = await sb.from('periods').select('locked,title').eq('id',pid).maybeSingle();
+  const next=!p.locked;
+  if(!confirm(`${next?'Lock':'Unlock'} "${p.title}"? ${next?'All its records become read-only.':'Records become editable again.'}`)) return;
+  const { error } = await sb.from('periods').update({locked:next}).eq('id',pid).select();
+  if(error){ toast('Failed: '+error.message); return; }
+  toast(next?'Period locked':'Period unlocked');
+  await loadPeriods(); renderTabs(); renderManagePeriods();
+}
+
+async function addNextPeriod(){
+  // derive the next 21st→20th cycle from the latest period
+  const { data:latest } = await sb.from('periods').select('*').order('start_date',{ascending:false}).limit(1).maybeSingle();
+  let start,end,title;
+  const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(latest){
+    const s=new Date(latest.start_date+'T00:00:00'); s.setMonth(s.getMonth()+1);
+    const e=new Date(latest.end_date+'T00:00:00');   e.setMonth(e.getMonth()+1);
+    start=s.toISOString().slice(0,10); end=e.toISOString().slice(0,10);
+    title=`${mons[s.getMonth()]} ${s.getDate()} – ${mons[e.getMonth()]} ${e.getDate()} ${e.getFullYear()}`;
+  } else {
+    const now=new Date(); const s=new Date(now.getFullYear(),now.getMonth(),21);
+    const e=new Date(now.getFullYear(),now.getMonth()+1,20);
+    start=s.toISOString().slice(0,10); end=e.toISOString().slice(0,10);
+    title=`${mons[s.getMonth()]} ${s.getDate()} – ${mons[e.getMonth()]} ${e.getDate()} ${e.getFullYear()}`;
+  }
+  const { data:newP, error } = await sb.from('periods')
+    .insert({title,start_date:start,end_date:end,locked:false}).select().maybeSingle();
+  if(error){ toast('Failed: '+error.message); return; }
+
+  // carry forward assignments from the latest period (shift/section/approver)
+  if(latest){
+    const { data:prev } = await sb.from('assignments').select('employee_id,section,shift,approver_id').eq('period_id',latest.id);
+    if(prev && prev.length){
+      const carry=prev.map(a=>({employee_id:a.employee_id,period_id:newP.id,section:a.section,shift:a.shift,approver_id:a.approver_id}));
+      await sb.from('assignments').upsert(carry,{onConflict:'employee_id,period_id'});
+    }
+  }
+  toast('Next period added');
+  await loadPeriods(); renderTabs(); renderManagePeriods();
+}
+
+/* =====================================================================
+   PEOPLE & GROUPS (Stage 4a)
+   Edit each person's section / shift / approver for the selected period.
+   Officer, Section Heads, Assistant Manager. RLS enforces write rights.
+   ===================================================================== */
+async function renderPeople(){
+  const host=$('pplHost');
+  if(!state.period){ host.innerHTML=`<div class="queue-empty">No period selected.</div>`; return; }
+  const locked=state.period.locked;
+
+  const [{data:assigns,error},{data:emps}] = await Promise.all([
+    sb.from('assignments').select('*, employees:employee_id(emp_id,name,position,role_code)').eq('period_id',state.period.id),
+    sb.from('employees').select('id,emp_id,name,role_code').eq('active',true)
+  ]);
+  if(error){ host.innerHTML=`<div class="note red">${error.message}</div>`; return; }
+
+  // approver options = supervisors, superintendents, assistant manager
+  const approverOpts = (emps||[]).filter(e=>APPROVERS.includes(e.role_code))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  const nameById=Object.fromEntries((emps||[]).map(e=>[e.id,e.emp_id+' · '+e.name]));
+
+  // only register holders need an assignment row shown
+  const holders=(assigns||[]).filter(a=>REGISTER_HOLDERS.includes(a.employees.role_code))
+    .sort((a,b)=>a.employees.name.localeCompare(b.employees.name));
+
+  const rows=holders.map(a=>{
+    const e=a.employees;
+    const secSel=`<select class="af" data-f="section" ${locked?'disabled':''}>
+      <option value="" ${!a.section?'selected':''}>—</option>
+      <option value="poly" ${a.section==='poly'?'selected':''}>Poly</option>
+      <option value="spinning" ${a.section==='spinning'?'selected':''}>Spinning</option></select>`;
+    const shiftSel=`<select class="af" data-f="shift" ${locked?'disabled':''}>
+      <option value="" ${!a.shift?'selected':''}>—</option>
+      ${['A','B','C','D'].map(s=>`<option value="${s}" ${a.shift===s?'selected':''}>${s}</option>`).join('')}</select>`;
+    const apprSel=`<select class="af" data-f="approver_id" ${locked?'disabled':''}>
+      <option value="" ${!a.approver_id?'selected':''}>— none —</option>
+      ${approverOpts.map(o=>`<option value="${o.id}" ${a.approver_id===o.id?'selected':''}>${o.emp_id} · ${o.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}</select>`;
+    return `<tr data-aid="${a.id}" data-emp="${a.employee_id}" data-empid="${e.emp_id}" data-name="${e.name}">
+      <td><strong>${e.name}</strong><div style="font-family:var(--mono);font-size:.72rem;color:var(--soft);">${e.emp_id} · ${ROLE_LABEL[e.role_code]}</div></td>
+      <td>${secSel}</td><td>${shiftSel}</td><td style="min-width:200px;">${apprSel}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm save-assign" ${locked?'disabled':''}>Save</button>
+        <button class="btn btn-sm red deactivate" title="Deactivate (keeps history)">Remove</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const roleOpts = Object.keys(ROLE_LABEL).map(rc=>`<option value="${rc}">${ROLE_LABEL[rc]}</option>`).join('');
+
+  host.innerHTML=`
+    <div class="admin-head"><h2>People &amp; groups</h2>
+      <button class="btn primary btn-sm" id="addPersonBtn">+ Add person</button>
+    </div>
+    <div class="admin-note">Set each person's section, shift, and approver <strong>for ${state.period.title}</strong>. ${locked?'This period is locked — unlock it to make changes.':'“Remove” deactivates a person (their history is kept).'}</div>
+
+    <div id="addPersonForm" class="add-form hidden">
+      <h3>Add a new person</h3>
+      <div class="add-grid">
+        <label>Employee ID<input id="npEmp" placeholder="e.g. KF0200" autocapitalize="characters"></label>
+        <label>Full name<input id="npName" placeholder="Full name"></label>
+        <label>Position<input id="npPos" placeholder="e.g. DCS"></label>
+        <label>Role<select id="npRole">${roleOpts}</select></label>
+        <label>Section<select id="npSec"><option value="">—</option><option value="poly">Poly</option><option value="spinning">Spinning</option></select></label>
+        <label>Shift<select id="npShift"><option value="">—</option>${['A','B','C','D'].map(s=>`<option value="${s}">${s}</option>`).join('')}</select></label>
+      </div>
+      <div class="approve-actions">
+        <button class="btn primary" id="npSave">Add person</button>
+        <button class="btn" id="npCancel">Cancel</button>
+      </div>
+      <div id="npResult"></div>
+    </div>
+
+    <div class="atable"><table class="list">
+      <thead><tr><th>Person</th><th>Section</th><th>Shift</th><th>Approver</th><th></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="5" style="text-align:center;color:var(--soft);padding:24px;">No assignments for this period.</td></tr>`}</tbody>
+    </table></div>`;
+
+  if(!locked){
+    host.querySelectorAll('.save-assign').forEach(b=> b.onclick=saveAssign);
+    host.querySelectorAll('.deactivate').forEach(b=> b.onclick=deactivatePerson);
+  }
+  $('addPersonBtn').onclick=()=> $('addPersonForm').classList.toggle('hidden');
+  $('npCancel').onclick=()=> $('addPersonForm').classList.add('hidden');
+  $('npSave').onclick=addPerson;
+}
+
+async function deactivatePerson(e){
+  const tr=e.target.closest('tr');
+  const empUuid=tr.dataset.emp, empId=tr.dataset.empid, name=tr.dataset.name;
+  if(!confirm(`Deactivate ${name} (${empId})? Their history is kept, but they'll be hidden from active lists and can't sign in for new entries. You can re-add later via SQL if needed.`)) return;
+  e.target.disabled=true;
+  const { data, error } = await sb.from('employees').update({active:false}).eq('id',empUuid).select();
+  if(error){ toast('Failed: '+error.message); e.target.disabled=false; return; }
+  if(!data||!data.length){ toast('No change — you may not have rights to do this.'); e.target.disabled=false; return; }
+  toast(name.split(' ')[0]+' deactivated');
+  renderPeople();
+}
+
+async function addPerson(){
+  const emp=$('npEmp').value.trim().toUpperCase();
+  const name=$('npName').value.trim();
+  const pos=$('npPos').value.trim();
+  const role=$('npRole').value;
+  const sec=$('npSec').value||null;
+  const shift=$('npShift').value||null;
+  if(!emp||!name){ toast('Employee ID and name are required'); return; }
+  $('npSave').disabled=true;
+  // 1) create the employee row
+  const { data:newEmp, error } = await sb.from('employees')
+    .insert({emp_id:emp, name, position:pos||null, role_code:role, default_section:sec, default_shift:shift, active:true})
+    .select().maybeSingle();
+  if(error){ toast('Failed: '+error.message); $('npSave').disabled=false; return; }
+  // 2) create an assignment row for the current period (so they show up)
+  if(REGISTER_HOLDERS.includes(role)){
+    await sb.from('assignments').upsert(
+      {employee_id:newEmp.id, period_id:state.period.id, section:sec, shift:shift, approver_id:null},
+      {onConflict:'employee_id,period_id'});
+  }
+  // 3) show the login snippet to run (browser can't create auth accounts safely)
+  const lc=emp.toLowerCase();
+  const email=lc+'@imoda.local', pw='moda'+lc;
+  $('npResult').innerHTML=`
+    <div class="note green" style="margin-top:14px;">
+      <strong>${name} added.</strong> To create their login, run this once in the Supabase SQL Editor:
+      <pre class="snippet">-- login for ${emp}
+do $$ declare v uuid; begin
+  if not exists (select 1 from auth.users where email='${email}') then
+    v:=gen_random_uuid();
+    insert into auth.users (id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
+      raw_app_meta_data,raw_user_meta_data,confirmation_token,recovery_token,email_change,
+      email_change_token_new,created_at,updated_at)
+    values (v,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','${email}',
+      crypt('${pw}',gen_salt('bf')),now(),'{"provider":"email","providers":["email"]}'::jsonb,
+      '{"emp_id":"${emp}"}'::jsonb,'','','','',now(),now());
+    insert into auth.identities (id,user_id,provider_id,identity_data,provider,last_sign_in_at,created_at,updated_at)
+    values (gen_random_uuid(),v,'${email}',
+      jsonb_build_object('sub',v::text,'email','${email}','email_verified',true),'email',now(),now(),now());
+    update public.employees set auth_user_id=v where emp_id='${emp}';
+  end if;
+end $$;</pre>
+      <div style="font-size:.8rem;">Login: <strong>${emp}</strong> · password <strong>${pw}</strong></div>
+    </div>`;
+  toast('Person added — see login snippet');
+  $('npSave').disabled=false;
+  // refresh the table but keep the form/snippet visible
+  const keep=$('npResult').innerHTML;
+  await renderPeople();
+  $('addPersonForm').classList.remove('hidden');
+  $('npResult').innerHTML=keep;
+}
+
+async function saveAssign(e){
+  const tr=e.target.closest('tr'); const aid=tr.dataset.aid;
+  const patch={
+    section: tr.querySelector('[data-f=section]').value || null,
+    shift:   tr.querySelector('[data-f=shift]').value || null,
+    approver_id: tr.querySelector('[data-f=approver_id]').value || null,
+  };
+  e.target.disabled=true;
+  const { data, error } = await sb.from('assignments').update(patch).eq('id',aid).select();
+  if(error){ toast('Failed: '+error.message); e.target.disabled=false; return; }
+  if(!data||!data.length){ toast('No change — you may not have edit rights, or the period is locked.'); e.target.disabled=false; return; }
+  toast('Assignment saved'); e.target.disabled=false;
+}
+
+/* shared read-only grid used by approvals + overview */
+function readonlyRegister(emp, assign, recs){
+  const byDate={}; recs.forEach(r=>byDate[r.work_date]=r);
+  const dates=datesInPeriod(state.period);
+  const sec=assign&&assign.section?(assign.section==='poly'?'Poly':'Spinning'):'';
+  const shift=assign&&assign.shift?'Shift '+assign.shift:'';
+  let rows=''; let lastMon=null;
+  dates.forEach(date=>{
+    const rec=byDate[date]||{shift_code:'OD',time_in:'',time_out:'',ot_hours:0,ot_type_code:'',remarks:''};
+    const {day,dow,mon,isWeekend}=fmtDate(date);
+    const mb=lastMon!==null&&mon!==lastMon; lastMon=mon;
+    const ot=Number(rec.ot_hours)||0;
+    rows+=`<tr class="${isWeekend?'weekend':''} ${mb?'mbreak':''}">
+      <td class="daycell"><span class="d">${String(day).padStart(2,'0')}</span><span class="w">${dow}</span><span class="m">${mon}</span></td>
+      <td>${rec.shift_code}</td>
+      <td>${to12h(rec.time_in)||'—'}</td>
+      <td>${to12h(rec.time_out)||'—'}</td>
+      <td style="text-align:center;">${ot||''}</td>
+      <td>${ot>0?(otLabel[rec.ot_type_code]||''):'—'}</td>
+      <td class="hide-sm">${(rec.remarks||'').replace(/</g,'&lt;')}</td>
+    </tr>`;
+  });
+  let work=0,odrd=0,leave=0,ot=0;
+  dates.forEach(d=>{const r=byDate[d]||{shift_code:'OD',ot_hours:0};const m=codeMeta[r.shift_code];if(m){if(m.group==='work'||m.group==='ph')work++;else if(m.group==='odrd')odrd++;else if(m.group==='leave'||m.group==='npl')leave++;}ot+=Number(r.ot_hours)||0;});
+  return `
+    <div class="reg-head">
+      <div><div class="nm">${emp.name}</div>
+      <div class="meta">${emp.emp_id} · ${emp.position||''}${sec||shift?' · '+[sec,shift].filter(Boolean).join(' · '):''}</div></div>
+    </div>
+    <div class="reg-wrap"><table class="reg">
+      <thead><tr><th style="width:96px;">Date</th><th>Day type</th><th>Time in</th><th>Time out</th><th>OT hrs</th><th>OT type</th><th class="hide-sm">Remarks</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <div class="reg-foot"><div class="sumline">
+      <span class="chip">Worked <b>${work}</b></span>
+      <span class="chip">Off/Rest <b>${odrd}</b></span>
+      <span class="chip">Leave <b>${leave}</b></span>
+      <span class="chip ot">OT total <b>${Math.round(ot*10)/10}h</b></span>
+    </div></div>`;
+}
+
+function placeholder(t){
+  return `<div class="placeholder"><h2>Nothing here</h2><p>This view isn't available for your role.</p></div>`;
+}
+
+/* ---- logout ---- */
+$('logoutBtn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  location.reload();
+});
+
+/* ---- helpers ---- */
+/* =====================================================================
+   OT ANALYSIS (Stage 4b) — one period: totals by section, per-person,
+   with a live vs approved-only scope toggle.
+   ===================================================================== */
+let otScope = 'all'; // 'all' | 'approved'
+
+async function renderOTAnalysis(){
+  const host=$('anHost');
+  if(!state.period){ host.innerHTML=`<div class="queue-empty">No period selected.</div>`; return; }
+
+  const { data:assigns } = await sb.from('assignments')
+    .select('employee_id,section,shift,employees:employee_id(emp_id,name,role_code)')
+    .eq('period_id',state.period.id);
+  const holders=(assigns||[]).filter(a=>REGISTER_HOLDERS.includes(a.employees.role_code));
+  const empIds=holders.map(a=>a.employee_id);
+  const secBy=Object.fromEntries(holders.map(a=>[a.employee_id,a.section]));
+
+  let approvedIds=null;
+  if(otScope==='approved'){
+    const { data:subs } = await sb.from('submissions').select('employee_id,status').eq('period_id',state.period.id).eq('status',STATUS.APPROVED).in('employee_id',empIds.length?empIds:['x']);
+    approvedIds=new Set((subs||[]).map(s=>s.employee_id));
+  }
+
+  const { data:atts } = await sb.from('attendance_records')
+    .select('employee_id,work_date,ot_hours,ot_type_code').eq('period_id',state.period.id).in('employee_id',empIds.length?empIds:['x']);
+
+  let totPoly=0,totSpin=0; const perPerson={};
+  const byType={}; OT_TYPES.forEach(t=>byType[t.code]=0);
+  const byDay={};   // date -> {type: hours}
+  (atts||[]).forEach(r=>{
+    if(approvedIds && !approvedIds.has(r.employee_id)) return;
+    const h=Number(r.ot_hours)||0; if(h<=0) return;
+    if(secBy[r.employee_id]==='poly') totPoly+=h; else if(secBy[r.employee_id]==='spinning') totSpin+=h;
+    perPerson[r.employee_id]=(perPerson[r.employee_id]||0)+h;
+    const tc=r.ot_type_code||'others'; byType[tc]=(byType[tc]||0)+h;
+    if(!byDay[r.work_date]) byDay[r.work_date]={};
+    byDay[r.work_date][tc]=(byDay[r.work_date][tc]||0)+h;
+  });
+  const grand=Math.round((totPoly+totSpin)*10)/10;
+  totPoly=Math.round(totPoly*10)/10; totSpin=Math.round(totSpin*10)/10;
+  const max=Math.max(totPoly,totSpin,1);
+
+  const ppl=holders.map(a=>({name:a.employees.name,emp:a.employees.emp_id,sec:a.section,ot:Math.round((perPerson[a.employee_id]||0)*10)/10}))
+    .filter(p=>p.ot>0).sort((x,y)=>y.ot-x.ot);
+
+  // #5 breakdown by OT type
+  const typeRows = OT_TYPES.map(t=>({label:t.label, h:Math.round((byType[t.code]||0)*10)/10}))
+    .filter(x=>x.h>0).sort((a,b)=>b.h-a.h);
+  const typeMax = Math.max(...typeRows.map(x=>x.h), 1);
+  const typeHtml = typeRows.length ? typeRows.map(x=>
+    `<div class="barrow"><div class="top"><span>${x.label}</span><span class="v">${x.h}h</span></div><div class="track"><div class="fill" style="width:${Math.round(x.h/typeMax*100)}%"></div></div></div>`).join('')
+    : `<div style="color:var(--soft);font-size:.85rem;">No OT recorded this period.</div>`;
+
+  // #3 per-day OT with category breakdown
+  const dates = datesInPeriod(state.period);
+  let dayBody=''; let lastMon=null;
+  dates.forEach(date=>{
+    const {day,dow,mon,isWeekend}=fmtDate(date);
+    const mb=lastMon!==null&&mon!==lastMon; lastMon=mon;
+    const dd=byDay[date]||{};
+    const dtot=Math.round(Object.values(dd).reduce((a,b)=>a+b,0)*10)/10;
+    const cells=OT_TYPES.map(t=>{ const v=Math.round((dd[t.code]||0)*10)/10; return `<td>${v?v:'<span class="z">·</span>'}</td>`; }).join('');
+    dayBody+=`<tr class="${isWeekend?'weekend':''} ${mb?'mbreak':''}"><td class="daycell"><span class="d">${String(day).padStart(2,'0')}</span><span class="w">${dow}</span><span class="m">${mon}</span></td>${cells}<td style="font-weight:700;">${dtot||'<span class="z">·</span>'}</td></tr>`;
+  });
+  const dayHead = `<tr><th>Date</th>${OT_TYPES.map(t=>`<th>${t.label}</th>`).join('')}<th>Total</th></tr>`;
+  const colTot = OT_TYPES.map(t=>`<td>${Math.round((byType[t.code]||0)*10)/10||0}</td>`).join('');
+  const dayFoot = `<tr class="total"><td>Total</td>${colTot}<td>${grand}</td></tr>`;
+
+  host.innerHTML=`
+    <div class="scope-toggle">
+      <button class="${otScope==='all'?'active':''}" data-scope="all">Live (all entered)</button>
+      <button class="${otScope==='approved'?'active':''}" data-scope="approved">Approved only</button>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="kl">Total OT · ${state.period.title}</div><div class="kv">${grand}h</div><div class="ks">${otScope==='approved'?'approved registers':'all entered so far'}</div></div>
+      <div class="kpi"><div class="kl">Poly</div><div class="kv">${totPoly}h</div></div>
+      <div class="kpi"><div class="kl">Spinning</div><div class="kv">${totSpin}h</div></div>
+    </div>
+    <div class="bars"><h3>OT by section</h3>
+      <div class="barrow"><div class="top"><span>Poly</span><span class="v">${totPoly}h</span></div><div class="track"><div class="fill poly" style="width:${Math.round(totPoly/max*100)}%"></div></div></div>
+      <div class="barrow"><div class="top"><span>Spinning</span><span class="v">${totSpin}h</span></div><div class="track"><div class="fill spin" style="width:${Math.round(totSpin/max*100)}%"></div></div></div>
+    </div>
+    <div class="bars"><h3>OT breakdown by type</h3>${typeHtml}</div>
+    <div class="bars" style="padding-bottom:8px;"><h3>Day-by-day OT (${state.period.title})</h3>
+      <div style="overflow-x:auto;"><table class="matrix">
+        <thead>${dayHead}</thead><tbody>${dayBody}${dayFoot}</tbody>
+      </table></div>
+    </div>
+    <div class="atable"><table class="list">
+      <thead><tr><th>Person</th><th>Section</th><th style="text-align:right;">OT hours</th></tr></thead>
+      <tbody>${ppl.length?ppl.map(p=>`<tr><td><strong>${p.name}</strong> <span style="font-family:var(--mono);font-size:.72rem;color:var(--soft);">${p.emp}</span></td><td>${p.sec==='poly'?'Poly':p.sec==='spinning'?'Spinning':'—'}</td><td style="text-align:right;font-family:var(--mono);font-weight:700;">${p.ot}</td></tr>`).join(''):`<tr><td colspan="3" style="text-align:center;color:var(--soft);padding:24px;">No OT recorded ${otScope==='approved'?'in approved registers ':''}this period.</td></tr>`}</tbody>
+    </table></div>`;
+
+  host.querySelectorAll('.scope-toggle button').forEach(b=> b.onclick=()=>{ otScope=b.dataset.scope; renderOTAnalysis(); });
+}
+
+/* =====================================================================
+   OT SUMMARY (Stage 4b) — OT-type × period matrix + trailing forecast.
+   ===================================================================== */
+async function renderOTSummary(){
+  const host=$('smHost');
+  const { data:periods } = await sb.from('periods').select('*').order('start_date',{ascending:true});
+  if(!periods || !periods.length){ host.innerHTML=`<div class="queue-empty">No periods yet.</div>`; return; }
+
+  // pull all OT rows across all periods (RLS: oversight roles read all)
+  const { data:atts, error } = await sb.from('attendance_records').select('period_id,ot_hours,ot_type_code').gt('ot_hours',0);
+  if(error){ host.innerHTML=`<div class="note red">${error.message}</div>`; return; }
+
+  // matrix[type][period] = hours
+  const matrix={}; OT_TYPES.forEach(t=>{ matrix[t.code]={}; periods.forEach(p=>matrix[t.code][p.id]=0); });
+  const perPeriodTotal={}; periods.forEach(p=>perPeriodTotal[p.id]=0);
+  (atts||[]).forEach(r=>{
+    const code=r.ot_type_code||'others'; const h=Number(r.ot_hours)||0;
+    if(matrix[code] && matrix[code][r.period_id]!==undefined){ matrix[code][r.period_id]+=h; perPeriodTotal[r.period_id]+=h; }
+  });
+
+  const r1=v=>Math.round(v*10)/10;
+
+  // trailing forecast: average total OT of up to the last 4 periods
+  const totals=periods.map(p=>perPeriodTotal[p.id]);
+  const win=totals.slice(Math.max(0,totals.length-4));
+  const forecast=r1(win.reduce((a,b)=>a+b,0)/(win.length||1));
+
+  const selId = state.period ? state.period.id : null;
+  const hl = pid => pid===selId ? ' class="hlcol"' : '';
+
+  const head=`<tr><th>OT type</th>${periods.map(p=>`<th${hl(p.id)}>${p.title.split(' – ')[0]}</th>`).join('')}<th>Total</th></tr>`;
+  const body=OT_TYPES.map(t=>{
+    let rowTot=0;
+    const cells=periods.map(p=>{ const v=r1(matrix[t.code][p.id]); rowTot+=v; return `<td${hl(p.id)}>${v?v:'<span class="z">·</span>'}</td>`; }).join('');
+    return `<tr><td>${t.label}</td>${cells}<td style="font-weight:700;">${r1(rowTot)}</td></tr>`;
+  }).join('');
+  const totRow=`<tr class="total"><td>Total</td>${periods.map(p=>`<td${hl(p.id)}>${r1(perPeriodTotal[p.id])}</td>`).join('')}<td>${r1(totals.reduce((a,b)=>a+b,0))}</td></tr>`;
+
+  const selTotal = selId ? r1(perPeriodTotal[selId]) : 0;
+
+  host.innerHTML=`
+    <div class="admin-head"><h2>OT summary</h2></div>
+    <div class="period-bar" style="margin-bottom:16px;">
+      <span class="pl">Highlight period</span>
+      <select id="smPeriodSel">${periods.slice().reverse().map(p=>`<option value="${p.id}" ${p.id===selId?'selected':''}>${p.title}</option>`).join('')}</select>
+      <span class="pl" style="margin-left:auto;">Selected period OT: <strong>${selTotal}h</strong></span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="kl">Periods tracked</div><div class="kv">${periods.length}</div></div>
+      <div class="kpi"><div class="kl">Total OT · all periods</div><div class="kv">${r1(totals.reduce((a,b)=>a+b,0))}h</div></div>
+      <div class="kpi forecast"><div class="kl">Next-period forecast</div><div class="kv">${forecast}h</div><div class="ks">trailing average of last ${win.length} period${win.length>1?'s':''}</div></div>
+    </div>
+    <div class="admin-note">The highlighted column is your selected period. Forecast is a simple trailing average — upgradeable later.</div>
+    <div class="atable"><table class="matrix">
+      <thead>${head}</thead><tbody>${body}${totRow}</tbody></table></div>`;
+
+  const sel=$('smPeriodSel');
+  if(sel) sel.onchange=()=>{ state.period=state.periods.find(p=>p.id===sel.value)||state.period; renderOTSummary(); };
+}
+
+function initials(name){
+  const p=name.trim().split(/\s+/);
+  return ((p[0]?.[0]||'')+(p[1]?.[0]||'')).toUpperCase();
+}
+</script>
+</body>
+</html>
